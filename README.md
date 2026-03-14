@@ -120,7 +120,7 @@ Security Scanner Bot was built to fill this gap — making network-level mobile 
 │  ┌─────────────────────────────────────────────────────────┐    │
 │  │  xray-core (VLESS+Reality)                               │    │
 │  │  - Terminates VPN tunnel                                 │    │
-│  │  - Decrypts traffic for analysis                         │    │
+│  │  - Analyzes connection metadata (IP, port, SNI, volumes) │    │
 │  │  - Logs connections to access.log                        │    │
 │  └──────────────┬──────────────────────────────────────────┘    │
 │                 │                                                │
