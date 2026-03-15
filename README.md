@@ -908,6 +908,9 @@ The scanner architecture is designed for extensibility. Key integration points:
 
 ### Short-Term (Q1-Q2 2026)
 
+- [ ] **JA3/JA4 TLS Fingerprinting** — Identify malware by TLS handshake fingerprints, even when using standard HTTPS (port 443). Suricata JA3 extraction + malware fingerprint database from abuse.ch
+- [ ] **Secure VPN Key Delivery** — Replace raw VLESS URI with subscription URLs or self-destructing one-time links to protect server infrastructure
+- [ ] **Comprehensive UX Testing** — Full bot testing: all user flows, edge cases, error states, security audit
 - [ ] **iOS-specific detection rules** — Apple ecosystem telemetry classification, iCloud Private Relay detection
 - [ ] **WireGuard VPN option** — Alternative to VLESS for users who prefer WireGuard
 - [ ] **Scheduled recurring scans** — Users can set daily/weekly automated scans
