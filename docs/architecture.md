@@ -85,11 +85,11 @@ Security Scanner Bot is a server-side mobile traffic analysis system. It never i
 - **Responsibilities:**
   - User registration and language selection
   - Consent flow for privacy policy
-  - Device type selection (Android/iOS)
+  - Manufacturer selection (mobile-only, PC removed)
   - Scan initiation and progress reporting
   - Report delivery and follow-up questions
 - **FSM States:**
-  - `WELCOME` → `CONSENT` → `DEVICE_SELECT` → `VPN_SETUP` → `SCANNING` → `RESULTS`
+  - `WELCOME` → `CONSENT` → `MANUFACTURER` → `MODEL` → `SECURITY_LEVEL` → `VPN_SETUP` → `SCANNING` → `RESULTS`
 - **Handlers:** Command handlers (`/start`, `/scan`, `/history`, `/help`), callback query handlers for inline buttons, message handlers for free-text questions
 
 #### `scan_manager.py` — Scan Lifecycle Manager
@@ -97,7 +97,7 @@ Security Scanner Bot is a server-side mobile traffic analysis system. It never i
 - **Responsibilities:**
   - Orchestrates the full scan lifecycle
   - Provisions VPN credentials before scan
-  - Monitors scan duration (configurable, default 5 minutes)
+  - Monitors scan duration (30 minutes for users, 10 minutes for admin testing)
   - Triggers analysis pipeline when scan completes
   - Cleans up VPN credentials after scan
   - Handles concurrent scans (queue system)
