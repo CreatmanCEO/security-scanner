@@ -906,6 +906,17 @@ The scanner architecture is designed for extensibility. Key integration points:
 
 ## Future Roadmap
 
+### Phase 2: Local Docker Deployment + Open Source (Priority)
+
+The project is transitioning to a fully open-source, self-hosted model:
+
+- [ ] **Docker self-hosted package** — `docker compose up` deploys the entire stack on your own server
+- [ ] **Full open source** — Complete backend code, not just documentation
+- [ ] **Community-driven** — Issues, PRs, community-maintained detection rules
+- [ ] **Zero trust required** — Your traffic never leaves your infrastructure
+
+This addresses the core trust concern: instead of routing traffic through our servers, users can deploy their own instance. The cloud-hosted bot (@secure_scanbot) will continue operating for users who prefer convenience over self-hosting.
+
 ### Short-Term (Q1-Q2 2026)
 
 - [ ] **JA3/JA4 TLS Fingerprinting** — Identify malware by TLS handshake fingerprints, even when using standard HTTPS (port 443). Suricata JA3 extraction + malware fingerprint database from abuse.ch
