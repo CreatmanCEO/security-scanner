@@ -210,7 +210,7 @@ Security Scanner Bot was built to fill this gap — making network-level mobile 
 5. **Suricata** performs real-time signature matching against 18,987 rules
 6. **Zeek** generates structured connection/DNS/TLS logs
 7. **xray-core** logs all connection metadata (destination IPs, ports, protocols)
-8. **MalwareDetector** runs three-layer analysis on all collected data
+8. **MalwareDetector** runs four-layer analysis on all collected data (ports, behavior, blacklists, JA3 TLS fingerprinting)
 9. **AI Analyzer** generates an adaptive report matching user's technical level
 10. **Bot delivers** the report with threat severity ratings and recommendations
 11. **VPN credentials** are revoked after scan completion
@@ -616,6 +616,15 @@ For the complete telemetry domain database, see [docs/device-telemetry.md](docs/
 └─────────────────────────────────────────────────┘
 ```
 
+### UX Design Principles (v2.3)
+
+- **Simplified tone of voice:** All messages are written for non-technical users. No jargon like "VLESS", "Threat Intel", or "metadata" in user-facing text.
+- **Three report styles:** Users choose how the report is formatted -- "Plain language" / "Technical details" / "Expert report" -- via inline buttons.
+- **App download links per OS:** Android users see direct GitHub APK links for Hiddify, v2rayNG, and Streisand (with Russia-specific availability warnings). iPhone users see AppStore links for Hiddify and Streisand. A "Download app" inline button is embedded directly in the scan message.
+- **Secure VPN key delivery:** Scan instructions provide a subscription URL (recommended, hides server infrastructure) with a raw VLESS URI as fallback.
+- **Cancel flow:** Pressing Cancel or Back during an active scan deletes the scan from the database, removes the VPN key, and notifies the user that the key has been deleted. Navigating to app links does NOT cancel an active scan.
+- **Admin broadcast system:** Administrators can send messages to all users via a multi-step flow: compose text, preview with recipient count, confirm, send. Supports HTML formatting with automatic fallback on parse errors. Failed sends are logged individually.
+
 ---
 
 ## AI Adaptive Reports
@@ -997,10 +1006,14 @@ The project is transitioning to a fully open-source, self-hosted model:
 
 This addresses the core trust concern: instead of routing traffic through our servers, users can deploy their own instance. The cloud-hosted bot (@secure_scanbot) will continue operating for users who prefer convenience over self-hosting.
 
-### Implemented (v2.1-v2.2)
+### Implemented (v2.1-v2.3)
 
-- [x] **JA3 TLS Fingerprinting** — 97 malware fingerprints from abuse.ch SSLBL. Suricata JA3 extraction + ja3_matcher.py correlation
+- [x] **JA3 TLS Fingerprinting (Layer 4)** — 97 malware fingerprints from abuse.ch SSLBL. Suricata JA3 extraction + ja3_matcher.py correlation. Detects malware by TLS handshake even on port 443
 - [x] **Secure VPN Key Delivery** — Subscription URL (recommended) + raw VLESS URI (fallback) for secure key distribution
+- [x] **Admin Broadcast System** — FSM flow: compose text, preview with user count, confirm, send to all users. HTML support with fallback on parse errors. Error logging for failed sends
+- [x] **Tone of Voice Rewrite** — All user-facing messages simplified for non-technical users. Three report styles: plain language / technical / expert
+- [x] **App Download Links** — Inline button in scan message. Per-OS links: Android (GitHub APK) + iPhone (AppStore) with Russia-aware warnings. Apps: Hiddify, v2rayNG, Streisand
+- [x] **Cancel/Back Flow** — Cancel deletes scan from DB, removes VPN key, notifies user. Back-to-scan from app links does not cancel active scan
 - [x] **IP Enrichment Pipeline** — Offline prefix matching + IP-API.com + SQLite cache (24h TTL)
 - [x] **False Positive Protection** — Server IP filtering, SAFE_PREFIXES, AbuseIPDB threshold, client IP exclusion
 - [x] **Stale Scan Cleanup** — Auto-cleanup of scans older than 45 minutes, periodic check every 30 minutes
