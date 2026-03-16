@@ -18,7 +18,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Telegram-blue.svg)](https://t.me/secure_scanbot)
 [![IDS Rules](https://img.shields.io/badge/Suricata%20rules-18%2C987-orange.svg)](#suricata-ids-integration)
-[![Stalkerware DB](https://img.shields.io/badge/stalkerware%20domains-919-red.svg)](#layer-3--blacklist-correlation)
+[![Stalkerware DB](https://img.shields.io/badge/stalkerware%20domains-919-red.svg)](#layer-3-blacklist-correlation)
+[![JA3 Fingerprints](https://img.shields.io/badge/JA3%20malware%20fingerprints-97-purple.svg)](#layer-4-ja3-tls-fingerprinting)
 
 ---
 
@@ -27,10 +28,13 @@
 - [Project Overview](#project-overview)
 - [Why This Exists — The Origin Story](#why-this-exists--the-origin-story)
 - [How It Works — Architecture Overview](#how-it-works--architecture-overview)
-- [Three-Layer Detection Engine](#three-layer-detection-engine)
+- [Four-Layer Detection Engine](#four-layer-detection-engine)
   - [Layer 1: Port-Based Threat Detection](#layer-1-port-based-threat-detection)
   - [Layer 2: Behavioral Traffic Analysis](#layer-2-behavioral-traffic-analysis)
   - [Layer 3: Blacklist Correlation](#layer-3-blacklist-correlation)
+  - [Layer 4: JA3 TLS Fingerprinting](#layer-4-ja3-tls-fingerprinting)
+- [IP Enrichment](#ip-enrichment)
+- [False Positive Protection](#false-positive-protection)
 - [Device Manufacturer Telemetry](#device-manufacturer-telemetry)
 - [Bot UX Flow — Complete User Journey](#bot-ux-flow--complete-user-journey)
 - [AI Adaptive Reports](#ai-adaptive-reports)
@@ -120,7 +124,10 @@ Security Scanner Bot was built to fill this gap — making network-level mobile 
 │  ┌─────────────────────────────────────────────────────────┐    │
 │  │  xray-core (VLESS+Reality)                               │    │
 │  │  - Terminates VPN tunnel                                 │    │
-│  │  - Analyzes connection metadata (IP, port, SNI, volumes) │    │
+│  │  - Analyzes connection METADATA ONLY                     │    │
+│  │    (IP, port, SNI, volumes)                              │    │
+│  │  - No TLS interception, no MitM, no CA certificates      │    │
+│  │  - No PCAP storage — traffic analyzed, not saved         │    │
 │  │  - Logs connections to access.log                        │    │
 │  └──────────────┬──────────────────────────────────────────┘    │
 │                 │                                                │
@@ -142,7 +149,7 @@ Security Scanner Bot was built to fill this gap — making network-level mobile 
 │  └──────────────┬──────────────────────────────────────────┘    │
 │                 │                                                │
 │  ┌──────────────▼──────────────────────────────────────────┐    │
-│  │  MalwareDetector — Three-Layer Analysis Engine            │    │
+│  │  MalwareDetector — Four-Layer Analysis Engine             │    │
 │  │                                                          │    │
 │  │  Layer 1: Port Analysis (35+ known threat ports)         │    │
 │  │     └─ Instant match against RAT/backdoor/miner ports    │    │
@@ -158,13 +165,27 @@ Security Scanner Bot was built to fill this gap — making network-level mobile 
 │  │     ├─ Mining pool domains                               │    │
 │  │     ├─ Dynamic DNS services (C2 infrastructure)          │    │
 │  │     └─ Known malware C2 domains                          │    │
+│  │                                                          │    │
+│  │  Layer 4: JA3 TLS Fingerprinting                        │    │
+│  │     ├─ 97 malware fingerprints (abuse.ch SSLBL)         │    │
+│  │     └─ Detects malware by TLS handshake on port 443     │    │
+│  └──────────────┬──────────────────────────────────────────┘    │
+│                 │                                                │
+│  ┌──────────────▼──────────────────────────────────────────┐    │
+│  │  IP Enrichment                                          │    │
+│  │  - Offline prefix matching (Google, Apple, Meta, etc.)  │    │
+│  │  - IP-API.com lookups (org, ASN, country)               │    │
+│  │  - SQLite cache (24h TTL)                               │    │
+│  │  - AbuseIPDB / OTX threat intelligence                  │    │
 │  └──────────────┬──────────────────────────────────────────┘    │
 │                 │                                                │
 │  ┌──────────────▼──────────────────────────────────────────┐    │
 │  │  AI Analyzer (adaptive report generation)                │    │
+│  │  - Receives aggregated findings, NOT raw traffic         │    │
 │  │  - Determines user technical level (beginner/mid/expert) │    │
 │  │  - Generates human-readable threat report                │    │
-│  │  - Provides actionable recommendations                   │    │
+│  │  - Specific recommendations: Malwarebytes, Dr.Web,       │    │
+│  │    TinyCheck (no generic "block the port" advice)        │    │
 │  │  - Models: Groq LLaMA 3.3 70B / Google Gemini           │    │
 │  └──────────────┬──────────────────────────────────────────┘    │
 │                 │                                                │
@@ -185,7 +206,7 @@ Security Scanner Bot was built to fill this gap — making network-level mobile 
 1. **User starts scan** via Telegram bot (`/scan` command)
 2. **Bot provisions** a temporary VLESS+Reality VPN configuration
 3. **User connects** their phone to the VPN using v2rayNG (Android) or Shadowrocket (iOS)
-4. **All phone traffic** routes through the analysis server for a configurable scan window (default: 5 minutes)
+4. **All phone traffic** routes through the analysis server for a configurable scan window (default: 30 minutes, admin: 10 minutes)
 5. **Suricata** performs real-time signature matching against 18,987 rules
 6. **Zeek** generates structured connection/DNS/TLS logs
 7. **xray-core** logs all connection metadata (destination IPs, ports, protocols)
@@ -198,7 +219,7 @@ For detailed architecture documentation, see [docs/architecture.md](docs/archite
 
 ---
 
-## Three-Layer Detection Engine
+## Four-Layer Detection Engine
 
 ### Layer 1: Port-Based Threat Detection
 
@@ -396,6 +417,50 @@ While Pegasus is a nation-state tool and detection is not guaranteed, certain ne
 
 **Reference:** Amnesty International's [MVT (Mobile Verification Toolkit)](https://github.com/mvt-project/mvt) for comprehensive Pegasus forensics.
 
+### Layer 4: JA3 TLS Fingerprinting
+
+Even when malware communicates over standard HTTPS (port 443) and uses legitimate-looking domains, the TLS handshake itself creates a unique fingerprint. JA3 hashes the parameters of the TLS Client Hello message (cipher suites, extensions, elliptic curves) to create a fingerprint that identifies the TLS client implementation.
+
+**How it works:**
+
+1. **Suricata** extracts JA3 hashes from TLS handshakes in real time
+2. **ja3_matcher.py** compares extracted hashes against a database of 97 known malware fingerprints
+3. Fingerprints sourced from [abuse.ch SSLBL](https://sslbl.abuse.ch/ja3-fingerprints/) (SSL Blacklist)
+
+**Why this matters:** Many modern malware families use custom TLS implementations or specific cipher suite combinations that differ from standard browsers and apps. Even if a RAT connects to a legitimate-looking domain on port 443, its JA3 hash can betray its true nature.
+
+**Detection examples:**
+- Malware using Python `requests` library (distinct JA3 from mobile browsers)
+- Custom C2 frameworks with non-standard TLS stacks
+- Known malware families with catalogued JA3 fingerprints
+
+---
+
+## IP Enrichment
+
+Every destination IP observed during a scan goes through a multi-stage enrichment pipeline before threat assessment:
+
+1. **Offline prefix matching** — Instant classification of IPs belonging to known safe providers (Google, Apple, Yandex, VK, Meta, Fastly, Cloudflare, AWS, Akamai). No API call needed.
+2. **IP-API.com lookup** — For unknown IPs: determines organization name, ASN, country, and ISP. Results are cached in SQLite with 24-hour TTL to minimize API calls.
+3. **Threat intelligence** — Enriched IPs are checked against AbuseIPDB (reputation score) and AlienVault OTX (community threat indicators).
+
+This pipeline ensures that a connection to `142.250.x.x` is immediately identified as Google (safe) without wasting API quota, while truly unknown IPs get full threat analysis.
+
+---
+
+## False Positive Protection
+
+Accurate detection requires minimizing false alarms. The scanner implements multiple layers of false positive prevention:
+
+| Protection | What It Does |
+|------------|-------------|
+| **Server IP filtering** | The VPN server's own IP (95.85.235.*) is filtered at 3 levels: client IP extraction, detection filter, and AI prompt rules. Prevents the server from flagging itself. |
+| **Client IP exclusion** | The user's real IP is excluded from the external IP analysis pool. |
+| **SAFE_PREFIXES** | Known-good IP ranges (Google, Apple, Yandex, VK, Fastly, Cloudflare, AWS, Meta) are pre-classified as safe via offline prefix matching. |
+| **AbuseIPDB threshold** | IPs with AbuseIPDB confidence score below 10% are overridden to low severity, preventing alerts on IPs with minimal abuse history. |
+| **IP enrichment before threat lookup** | Organization name is resolved before threat assessment — if an IP belongs to a major cloud/CDN provider, it is treated accordingly. |
+| **Vendor telemetry separation** | Manufacturer telemetry (Xiaomi, Samsung, etc.) is classified separately from threats, not reported as malware. |
+
 ---
 
 ## Device Manufacturer Telemetry
@@ -488,11 +553,12 @@ For the complete telemetry domain database, see [docs/device-telemetry.md](docs/
 │  "Here's your scan configuration:                │
 │                                                   │
 │   📱 Install v2rayNG (Android) / Shadowrocket    │
-│   📋 [Copy Config] or scan QR code below         │
+│   📋 Subscription URL (recommended)              │
+│      + raw VLESS URI (fallback)                  │
 │                                                   │
-│   ┌────────────┐                                 │
-│   │  QR CODE   │  ← Auto-generated VLESS URI    │
-│   └────────────┘                                 │
+│   ⚠️ Key expires in 5 minutes                    │
+│   ⚠️ Disconnect VPN after scan                   │
+│   ⚠️ Do not use banking/government apps          │
 │                                                   │
 │   After connecting, tap 'Start Scan'"            │
 │                                                   │
@@ -505,12 +571,12 @@ For the complete telemetry domain database, see [docs/device-telemetry.md](docs/
 │                                                   │
 │  "🔍 Scanning your traffic...                    │
 │                                                   │
-│   ████████░░ 80%  (4:00 / 5:00)                  │
+│   ████████░░ 80%  (24:00 / 30:00)                 │
 │                                                   │
 │   Connections analyzed: 247                       │
 │   Unique destinations: 43                         │
 │   Suricata alerts: 2                              │
-│   Time remaining: ~1 min"                        │
+│   Time remaining: ~6 min"                        │
 │                                                   │
 │  [Stop Early — Get Results Now]                  │
 └──────────────────┬──────────────────────────────┘
@@ -521,7 +587,7 @@ For the complete telemetry domain database, see [docs/device-telemetry.md](docs/
 │                                                   │
 │  "📊 Scan Complete!                              │
 │                                                   │
-│   ⏱ Duration: 5 min 12 sec                      │
+│   ⏱ Duration: 30 min 12 sec                     │
 │   📡 Connections: 312                            │
 │   🔍 Analyzed: 312 / 312                        │
 │                                                   │
@@ -554,7 +620,15 @@ For the complete telemetry domain database, see [docs/device-telemetry.md](docs/
 
 ## AI Adaptive Reports
 
-The AI analyzer adjusts the technical depth of reports based on the user's detected or selected expertise level. Here is how the same finding — **outbound SSH connection to an unknown server** — is presented at each level:
+The AI analyzer receives **aggregated detection findings** (not raw traffic or PCAP data) and generates a human-readable report. It adjusts the technical depth based on the user's selected expertise level (beginner / intermediate / advanced).
+
+**Key design decisions:**
+- The LLM never sees raw network traffic — only structured findings from the detection engine
+- **Banned recommendations:** Generic advice like "block the port" or "contact your ISP" is explicitly prohibited in the AI prompt
+- **Specific tool recommendations:** Reports recommend concrete tools — Malwarebytes, Dr.Web Light, TinyCheck — instead of vague suggestions
+- **Cost tracking:** Every AI call logs the model used, token count, and cost per scan for operational monitoring
+
+Here is how the same finding — **outbound SSH connection to an unknown server** — is presented at each level:
 
 ### Beginner Level Report
 
@@ -651,7 +725,7 @@ A user (referred to as "User A") reported unusual behavior on their Xiaomi Redmi
 
 ### Scan Results
 
-**Scan duration:** 5 minutes
+**Scan duration:** 30 minutes
 **Total connections observed:** 487
 **Unique destination IPs:** 67
 
@@ -717,6 +791,8 @@ For additional case studies, see [docs/case-studies.md](docs/case-studies.md).
 | **Database** | SQLite | 3.x | Lightweight, serverless, zero-config. Perfect for single-server deployment. Tables: users, scans, device_vendors, scan_results. |
 | **Threat Intel** | [AbuseIPDB](https://www.abuseipdb.com/) | API v2 | IP reputation database. Checks if destination IPs have been reported for malicious activity. Provides confidence score and abuse categories. |
 | **Threat Intel** | [AlienVault OTX](https://otx.alienvault.com/) | API v2 | Open Threat Exchange. Provides pulse-based threat intelligence. Checks IPs/domains against community-contributed indicators. |
+| **TLS Fingerprinting** | [abuse.ch SSLBL](https://sslbl.abuse.ch/ja3-fingerprints/) | Latest | JA3 malware fingerprint database. 97 known malware TLS fingerprints. Suricata extracts JA3 hashes, ja3_matcher.py correlates with SSLBL. |
+| **IP Enrichment** | [IP-API.com](http://ip-api.com/) + offline prefixes | API | Multi-stage IP enrichment: offline prefix matching for known providers, API lookup for unknowns, SQLite cache with 24h TTL. |
 | **Stalkerware DB** | [AssoEchap](https://github.com/AssoEchap/stalkerware-indicators) | Latest | Open-source stalkerware indicator database. 172 families, 919+ domains. Updated by community of anti-stalkerware researchers. |
 
 ### Project Structure
@@ -729,10 +805,13 @@ bot/
   database.py             — SQLite: users, scans, device_vendors, scan_results
 
 analysis/
-  malware_detector.py     — Three-layer detection engine (ports → behavior → blacklists)
+  malware_detector.py     — Four-layer detection engine (ports → behavior → blacklists → JA3)
   traffic_classifier.py   — Domain categorization (CDN, social, telemetry, ad, unknown)
   ai_analyzer.py          — LLM-based report generation (user_level adaptive)
-  threat_lookup.py        — External API queries (AbuseIPDB, OTX, VirusTotal)
+  threat_lookup.py        — External API queries (AbuseIPDB, OTX)
+  ip_enrichment.py        — Offline prefix matching + IP-API.com + SQLite cache (24h TTL)
+  ja3_matcher.py          — JA3 TLS fingerprint matching (97 hashes from abuse.ch SSLBL)
+  whitelist.py            — SAFE_PREFIXES, known service IP ranges
   blacklists/
     stalkerware.txt       — 919 domains from AssoEchap
     mining_pools.txt      — Known mining pool domains
@@ -804,6 +883,7 @@ This project builds on the work of several open-source projects and research ini
 | **MVT (Mobile Verification Toolkit)** | Reference for Pegasus IoC patterns. Our scanner covers network-layer indicators; MVT covers device forensics. Complementary tools. | [GitHub](https://github.com/mvt-project/mvt) |
 | **Suricata** | Core IDS engine. We use EVE JSON output for structured alert processing. | [suricata.io](https://suricata.io/) |
 | **Zeek** | Network metadata generation. conn.log provides connection-level statistics for behavioral analysis. | [zeek.org](https://zeek.org/) |
+| **abuse.ch SSLBL** | JA3 fingerprint database. 97 malware TLS fingerprints for identifying malware by TLS handshake characteristics. | [sslbl.abuse.ch](https://sslbl.abuse.ch/ja3-fingerprints/) |
 | **AbuseIPDB** | IP reputation lookups. We query destination IPs to correlate with known malicious infrastructure. | [abuseipdb.com](https://www.abuseipdb.com/) |
 | **AlienVault OTX** | Open threat exchange. Community-contributed threat intelligence for IP/domain enrichment. | [otx.alienvault.com](https://otx.alienvault.com/) |
 | **MITRE ATT&CK Mobile** | Threat classification framework. We map findings to ATT&CK Mobile technique IDs for standardized reporting. | [attack.mitre.org/mobile](https://attack.mitre.org/matrices/mobile/) |
@@ -833,7 +913,7 @@ This project builds on the work of several open-source projects and research ini
 
 1. **Zero install on target device** — Only requires VPN connection, no app installation, no USB access, no jailbreak/root
 2. **Accessible to non-technical users** — Telegram bot interface with AI-generated plain-language reports
-3. **Three-layer analysis** — Combines signature matching (Suricata), behavioral analysis, and threat intelligence correlation
+3. **Four-layer analysis** — Combines signature matching (Suricata), behavioral analysis, threat intelligence correlation, and JA3 TLS fingerprinting
 4. **Manufacturer telemetry awareness** — Separately classifies vendor telemetry so users understand the full picture
 5. **Adaptive reporting** — Same finding explained differently for beginners vs. security professionals
 
@@ -917,10 +997,17 @@ The project is transitioning to a fully open-source, self-hosted model:
 
 This addresses the core trust concern: instead of routing traffic through our servers, users can deploy their own instance. The cloud-hosted bot (@secure_scanbot) will continue operating for users who prefer convenience over self-hosting.
 
+### Implemented (v2.1-v2.2)
+
+- [x] **JA3 TLS Fingerprinting** — 97 malware fingerprints from abuse.ch SSLBL. Suricata JA3 extraction + ja3_matcher.py correlation
+- [x] **Secure VPN Key Delivery** — Subscription URL (recommended) + raw VLESS URI (fallback) for secure key distribution
+- [x] **IP Enrichment Pipeline** — Offline prefix matching + IP-API.com + SQLite cache (24h TTL)
+- [x] **False Positive Protection** — Server IP filtering, SAFE_PREFIXES, AbuseIPDB threshold, client IP exclusion
+- [x] **Stale Scan Cleanup** — Auto-cleanup of scans older than 45 minutes, periodic check every 30 minutes
+- [x] **Admin Metrics** — Scan statistics, AI cost tracking (model, tokens, cost per scan), active scan monitoring with username
+
 ### Short-Term (Q1-Q2 2026)
 
-- [ ] **JA3/JA4 TLS Fingerprinting** — Identify malware by TLS handshake fingerprints, even when using standard HTTPS (port 443). Suricata JA3 extraction + malware fingerprint database from abuse.ch
-- [ ] **Secure VPN Key Delivery** — Replace raw VLESS URI with subscription URLs or self-destructing one-time links to protect server infrastructure
 - [ ] **Comprehensive UX Testing** — Full bot testing: all user flows, edge cases, error states, security audit
 - [ ] **iOS-specific detection rules** — Apple ecosystem telemetry classification, iCloud Private Relay detection
 - [ ] **WireGuard VPN option** — Alternative to VLESS for users who prefer WireGuard
