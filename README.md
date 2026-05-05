@@ -16,10 +16,32 @@
 [@secure_scanbot](https://t.me/secure_scanbot) on Telegram
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Stars](https://img.shields.io/github/stars/CreatmanCEO/security-scanner?style=flat&color=yellow)](https://github.com/CreatmanCEO/security-scanner/stargazers)
+[![Validate](https://github.com/CreatmanCEO/security-scanner/actions/workflows/validate.yml/badge.svg)](https://github.com/CreatmanCEO/security-scanner/actions/workflows/validate.yml)
+[![Bot](https://img.shields.io/badge/%40secure__scanbot-LIVE-22c55e?logo=telegram)](https://t.me/secure_scanbot)
 [![Platform](https://img.shields.io/badge/platform-Telegram-blue.svg)](https://t.me/secure_scanbot)
 [![IDS Rules](https://img.shields.io/badge/Suricata%20rules-18%2C987-orange.svg)](#suricata-ids-integration)
 [![Stalkerware DB](https://img.shields.io/badge/stalkerware%20domains-919-red.svg)](#layer-3-blacklist-correlation)
 [![JA3 Fingerprints](https://img.shields.io/badge/JA3%20malware%20fingerprints-97-purple.svg)](#layer-4-ja3-tls-fingerprinting)
+
+---
+
+## What it looks like
+
+> UI shown in Russian (default locale). The bot is bilingual; English locale is supported.
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/01-onboarding-and-vpn.webp" width="640" alt="Onboarding flow — three Telegram screens: phone-virus-scan greeting with the five-step explanation, the policy disclaimer 'we do not read your messages or see your passwords — only what your phone is connecting to', and the VPN-client picker for Android (Hiddify, v2rayNG, NekoBox) and iPhone (Streisand, Hiddify)"/></td>
+  </tr>
+  <tr><td align="center"><b>1 — Onboarding & VPN setup</b><br><sub>Plain-language explanation of how the scan works, an explicit privacy disclaimer ("we don't read your messages — only what your phone is connecting to"), and per-OS VPN-client links with Russia-aware AppStore / Google Play fallbacks.</sub></td></tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/02-scan-and-report-delivery.webp" width="640" alt="Scan flow — three Telegram screens: scan started with VPN setup instructions, two ways to provide the VLESS key with copy-to-clipboard, and the final report-delivery screen reporting 'Your phone is safe — 729 connections to 29 services in 10 minutes' with a downloadable HTML report attachment"/></td>
+  </tr>
+  <tr><td align="center"><b>2 — Active scan and report delivery</b><br><sub>Live scan progress with two VPS-key delivery modes (subscription URL recommended, raw VLESS as fallback), then the final report — connection counts, distinct services, and an HTML attachment for offline reading. AI-adaptive: same data, three reading levels.</sub></td></tr>
+</table>
+
+> 📄 **Sample report:** [`docs/reports/sample-scan-report.md`](docs/reports/sample-scan-report.md) · [HTML version](docs/reports/sample-scan-report.html). Anonymised real-world report — three CRITICAL findings (SSH / Telnet / RTSP), six HIGH-severity threat-intel IPs, traffic statistics.
 
 ---
 
@@ -1057,16 +1079,65 @@ This addresses the core trust concern: instead of routing traffic through our se
 
 ---
 
+## Limitations & known failure modes
+
+Honest constraints — every security tool has them; we name ours.
+
+- **Encrypted-payload blindness.** We inspect TLS metadata (SNI, JA3, certificate fingerprint) but not decrypted HTTPS payload. Malware that uses well-known cloud frontends (CloudFront, Cloudflare) and a generic JA3 can pass through undetected.
+- **JA3 fingerprint evasion.** Modern malware can randomise its TLS handshake or copy the fingerprint of a popular browser. Layer 4 catches the common cases (97 fingerprints from abuse.ch SSLBL); a determined adversary can bypass it.
+- **Detection lag.** Behavioural detection (beaconing, exfiltration) needs a meaningful traffic window. The default 30-minute scan reliably catches periodic C2 callbacks at intervals of 5 minutes or shorter; a 1-hour-interval beacon may be missed.
+- **Mobile-only scope.** The bot scans the device that connects through the VPN. Laptops, desktops, IoT devices on the same Wi-Fi network are out of scope.
+- **Network-side only.** Unlike on-device tools (Amnesty MVT), we cannot read installed-app lists, file hashes, or system logs. We only see the device's network behaviour.
+- **VPN trust requirement.** During the scan, the user's traffic transits the analysis server. The bot's privacy policy states this explicitly; users who object to that arrangement are the target audience for the upcoming **Phase 2 self-hosted Docker deployment** — see [Future Roadmap](#future-roadmap).
+- **False positives.** A whitelist + AbuseIPDB confidence threshold + client-IP exclusion catch most obvious cases, but a benign service hosted on a previously-compromised IP can still trigger a HIGH alert. The bot's AI report-generator is supposed to soften this in plain-language reports — we welcome PRs that improve calibration.
+- **No on-device remediation.** The bot tells the user *what is happening*; remediation (factory reset, password rotation, professional forensics) is on the user.
+
+---
+
 ## Try It
 
-[@secure_scanbot](https://t.me/secure_scanbot) — the bot is live 24/7
+[@secure_scanbot](https://t.me/secure_scanbot) — the bot is live 24/7. Scan takes about 30 minutes after VPN connection.
+
+---
+
+## Contact
+
+| Channel | For |
+|---|---|
+| 🤖 [@secure_scanbot](https://t.me/secure_scanbot) | End users — the live bot |
+| 💬 [@Creatman_it](https://t.me/Creatman_it) | General contact, partnerships |
+| 🐙 [GitHub Issues](https://github.com/CreatmanCEO/security-scanner/issues) | Bugs, feature requests, detection-rule suggestions |
+| 📧 creatmanick@gmail.com | Security researchers · responsible disclosure · press · partnership / commercial |
+
+---
+
+## Related — Claude Code ecosystem by the same author
+
+This project is built on a Claude Code-centric workflow. The same author maintains a public toolset that supports this discipline:
+
+- [`claude-code-antiregression-setup`](https://github.com/CreatmanCEO/claude-code-antiregression-setup) — `CLAUDE.md` + subagents + hooks pattern. Featured on [Habr](https://habr.com/ru/articles/1013330/) (top-5 of the day, 20K reads).
+- [`ai-context-hierarchy`](https://github.com/CreatmanCEO/ai-context-hierarchy) — three-level context system. Featured in the [Graphify v5.0 roadmap](https://github.com/safishamsi/graphify/issues/425).
+- [`claude-statusline`](https://github.com/CreatmanCEO/claude-statusline) — statusline for Claude Code with VPS health monitoring. Featured on [Habr](https://habr.com/ru/articles/1013414/).
+- [`notebooklm-claude-workflows`](https://github.com/CreatmanCEO/notebooklm-claude-workflows) — seven slash-commands for Google NotebookLM research pipelines.
+- [`lingua-companion`](https://github.com/CreatmanCEO/lingua-companion) — voice-first English tutor for Russian-speaking IT professionals.
+- [`diabot`](https://github.com/CreatmanCEO/diabot) — non-commercial Telegram bot for type 1 diabetes (food photo → carb counting).
+- [`ghost-showcase`](https://github.com/CreatmanCEO/ghost-showcase) — invisible AI assistant for Windows (commercial product showcase).
 
 ---
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE) · Nick Podolyak
 
 ---
 
-*Built by [Creatman](https://github.com/CreatmanCEO) — Making mobile security accessible to everyone.*
+## Author
+
+**Nick Podolyak** — Python developer and digital architect at [CREATMAN](https://creatman.site)
+
+- GitHub: [@CreatmanCEO](https://github.com/CreatmanCEO)
+- Habr: [creatman](https://habr.com/ru/users/creatman/)
+- dev.to: [@creatman](https://dev.to/creatman)
+- Telegram: [@Creatman_it](https://t.me/Creatman_it)
+
+*Making mobile security accessible to everyone.*

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sample scan report — Creatman Security Scan</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #7d8590;
+    --accent: #cc785c;
+    --critical: #ff5f56;
+    --critical-bg: #2a1414;
+    --high: #d97706;
+    --ok: #22c55e;
+    --link: #3b9eff;
+    --code-bg: #1f2937;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+    margin: 0;
+    padding: 0;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 24px 64px; }
+  h1 { font-size: 22px; margin: 0 0 8px; }
+  h2 { font-size: 18px; margin: 28px 0 10px; padding-top: 12px; border-top: 1px solid var(--border); }
+  h3 { font-size: 15px; margin: 18px 0 6px; }
+  p, li { font-size: 14px; }
+  code { background: var(--code-bg); padding: 1px 6px; border-radius: 4px; font-size: 13px; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  a { color: var(--link); }
+  blockquote { border-left: 3px solid var(--accent); padding: 8px 14px; margin: 14px 0; color: var(--muted); background: var(--panel); border-radius: 4px; font-size: 13px; }
+  .meta { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+  .verdict { background: var(--critical-bg); border: 1px solid var(--critical); padding: 14px 16px; border-radius: 8px; margin: 18px 0; }
+  .verdict-head { color: var(--critical); font-weight: 700; font-size: 15px; margin-bottom: 4px; }
+  .finding { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin: 12px 0; }
+  .finding.critical { border-left: 4px solid var(--critical); }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; vertical-align: middle; margin-right: 8px; }
+  .badge.critical { background: var(--critical); color: #fff; }
+  .badge.high { background: var(--high); color: #fff; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+  th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; }
+  tr:last-child td { border-bottom: none; }
+  ul { padding-left: 22px; margin: 8px 0; }
+  .footnote { color: var(--muted); font-size: 12px; margin-top: 28px; padding: 14px 16px; background: var(--panel); border-radius: 8px; border-left: 3px solid var(--link); }
+</style>
+</head>
+<body>
+<main>
+
+<h1>🛡 Creatman Security Scan — sample report</h1>
+<div class="meta">
+  <strong>Scan ID:</strong> <code>scan_20260316_085734_15d2c439</code> ·
+  <strong>Date:</strong> 2026-03-16 09:29 UTC+1 ·
+  <strong>Analysis duration:</strong> 30 minutes
+</div>
+
+<blockquote>Anonymised real-world report from <a href="https://t.me/secure_scanbot">@secure_scanbot</a>. Phone identifiers, account IPs, and VPN client IDs are redacted. Threat IPs are preserved as originally reported. Original locale: Russian — translated below for the public showcase.</blockquote>
+
+<div class="verdict">
+  <div class="verdict-head">⚠ Verdict — threats detected on your phone</div>
+  <div>The phone was communicating with mainstream services (social networks, messengers, video platforms) as expected for normal use. <strong>In addition, attempts to connect to suspicious servers were observed</strong> — and that is what this report is about.</div>
+</div>
+
+<h2>Issues detected</h2>
+
+<div class="finding critical">
+  <h3><span class="badge critical">CRITICAL</span>Suspicious channel on port 22 (SSH)</h3>
+  <p>A consumer phone has no legitimate reason to initiate SSH connections. SSH is a server-administration protocol; finding outbound SSH from a mobile device almost always means a remote-control implant.</p>
+  <ul>
+    <li><strong>Risk:</strong> an attacker may be able to remotely access your phone and exfiltrate personal data</li>
+    <li><strong>What to do:</strong> from a different device, change passwords for your email and banking apps; consider a factory reset of the phone</li>
+  </ul>
+</div>
+
+<div class="finding critical">
+  <h3><span class="badge critical">CRITICAL</span>Suspicious channel on port 23 (Telnet)</h3>
+  <p>Same family of finding as SSH: Telnet is an administration protocol that has no place on a consumer phone. Outbound Telnet from a mobile device is a strong indicator of a remote-control implant or backdoor.</p>
+  <ul>
+    <li><strong>Risk:</strong> an attacker may be able to remotely access your phone and exfiltrate personal data</li>
+    <li><strong>What to do:</strong> from a different device, change passwords for your email and banking apps; consider a factory reset of the phone</li>
+  </ul>
+</div>
+
+<div class="finding critical">
+  <h3><span class="badge critical">CRITICAL</span>Suspicious channel on port 554 (RTSP)</h3>
+  <p>RTSP (Real-Time Streaming Protocol) is the protocol cameras use to stream video. Outbound RTSP from a mobile device often means the camera and/or microphone are being streamed to an external server.</p>
+  <ul>
+    <li><strong>Risk:</strong> an attacker may be capturing video or audio from your phone without your consent</li>
+    <li><strong>What to do:</strong> from a different device, change passwords for your email and banking apps; consider a factory reset of the phone</li>
+  </ul>
+</div>
+
+<h2>Recommendations</h2>
+<ol>
+  <li>From a different device, change passwords for your email and banking apps.</li>
+  <li>Consider a factory reset of the phone to remove any potentially malicious software.</li>
+  <li>Install a reputable mobile anti-malware tool (e.g. Malwarebytes Mobile, Dr.Web Light) and run a full scan.</li>
+</ol>
+
+<h2>Traffic statistics</h2>
+<table>
+  <tr><th>Metric</th><th>Value</th></tr>
+  <tr><td>Total connections</td><td>125</td></tr>
+  <tr><td>Data volume</td><td>8.3 MB</td></tr>
+  <tr><td>Unique IP destinations</td><td>1</td></tr>
+  <tr><td>Analysis window</td><td>1,800 s (30 min)</td></tr>
+</table>
+
+<h3>Top ports</h3>
+<ul><li>Port <strong>443 (HTTPS)</strong> — 87 connections (100.0% of TCP)</li></ul>
+
+<h2>Threat-intelligence findings</h2>
+<table>
+  <tr><th>Severity</th><th>IP</th><th>Notes</th></tr>
+  <tr><td><span class="badge high">HIGH</span></td><td><code>85.90.246.234</code></td><td>flagged by threat-intel correlation</td></tr>
+  <tr><td><span class="badge high">HIGH</span></td><td><code>172.104.99.199</code></td><td>flagged by threat-intel correlation</td></tr>
+  <tr><td><span class="badge high">HIGH</span></td><td><code>37.46.119.14</code></td><td>OTX reports: 1</td></tr>
+  <tr><td><span class="badge high">HIGH</span></td><td><code>51.75.34.93</code></td><td>flagged by threat-intel correlation</td></tr>
+  <tr><td><span class="badge high">HIGH</span></td><td><code>209.38.189.134</code></td><td>flagged by threat-intel correlation</td></tr>
+  <tr><td><span class="badge high">HIGH</span></td><td><code>170.64.245.133</code></td><td>flagged by threat-intel correlation</td></tr>
+</table>
+
+<div class="footnote">
+  <strong>About this sample.</strong> This is the actual report format a user receives from <a href="https://t.me/secure_scanbot">@secure_scanbot</a>. The bot's AI report-generator decides which severity level to use for the user (Beginner / Intermediate / Expert) — the version shown here is the Beginner-level rendering, explaining what each port means in plain language. Intermediate and Expert versions add JA3 fingerprints, beaconing intervals, and Suricata-rule signatures.<br><br>
+  <strong>Why so many HIGH IPs with one HTTPS port</strong> — the device's TLS (port 443) traffic was being relayed through several known-bad IP addresses cross-referenced against OTX, AbuseIPDB, and VirusTotal feeds. Port 22 / 23 / 554 connections were short-lived but flagged by the port-based detection layer.<br><br>
+  <strong>Markdown version</strong> at <a href="sample-scan-report.md">sample-scan-report.md</a>.
+</div>
+
+</main>
+</body>
+</html>

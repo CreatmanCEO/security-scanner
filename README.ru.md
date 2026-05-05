@@ -16,10 +16,32 @@
 [@secure_scanbot](https://t.me/secure_scanbot) в Telegram
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Stars](https://img.shields.io/github/stars/CreatmanCEO/security-scanner?style=flat&color=yellow)](https://github.com/CreatmanCEO/security-scanner/stargazers)
+[![Validate](https://github.com/CreatmanCEO/security-scanner/actions/workflows/validate.yml/badge.svg)](https://github.com/CreatmanCEO/security-scanner/actions/workflows/validate.yml)
+[![Bot](https://img.shields.io/badge/%40secure__scanbot-LIVE-22c55e?logo=telegram)](https://t.me/secure_scanbot)
 [![Platform](https://img.shields.io/badge/platform-Telegram-blue.svg)](https://t.me/secure_scanbot)
 [![IDS Rules](https://img.shields.io/badge/Suricata%20rules-18%2C987-orange.svg)](#интеграция-с-suricata-ids)
 [![Stalkerware DB](https://img.shields.io/badge/stalkerware%20domains-919-red.svg)](#уровень-3-проверка-по-чёрным-спискам)
 [![JA3 Fingerprints](https://img.shields.io/badge/JA3%20malware%20fingerprints-97-purple.svg)](#уровень-4-ja3-tls-фингерпринтинг)
+
+---
+
+## Как это выглядит
+
+> Интерфейс показан на русском (язык по умолчанию). Бот билингв — английская локаль также поддержана.
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/01-onboarding-and-vpn.webp" width="640" alt="Онбординг — три экрана Telegram: проверка телефона на вирусы, политика приватности 'мы не читаем переписки и не видим пароли', выбор VPN-клиента под Android и iPhone"/></td>
+  </tr>
+  <tr><td align="center"><b>1 — Онбординг и подключение VPN</b><br><sub>Простое объяснение как работает сканирование, явный privacy-disclaimer («мы не читаем переписки — только куда подключается ваш телефон»), линки на VPN-клиенты под каждую ОС с RU-aware fallback'ами на AppStore / Google Play.</sub></td></tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/02-scan-and-report-delivery.webp" width="640" alt="Сканирование — три экрана Telegram: сканирование запущено с инструкцией по настройке VPN, два способа передачи VLESS-ключа с copy-to-clipboard, финальный отчёт «Ваш телефон в безопасности — 729 подключений к 29 сервисам за 10 минут» с прикреплённым HTML-отчётом"/></td>
+  </tr>
+  <tr><td align="center"><b>2 — Активное сканирование и доставка отчёта</b><br><sub>Прогресс сканирования + два режима доставки VPN-ключа (subscription URL рекомендуется, raw VLESS как fallback), затем финальный отчёт — счётчики подключений, список сервисов и HTML-вложение для офлайн-чтения. AI-адаптивный: те же данные на трёх уровнях сложности.</sub></td></tr>
+</table>
+
+> 📄 **Пример отчёта:** [`docs/reports/sample-scan-report.md`](docs/reports/sample-scan-report.md) · [HTML-версия](docs/reports/sample-scan-report.html). Анонимизированный реальный отчёт — три CRITICAL находки (SSH / Telnet / RTSP), шесть HIGH-severity threat-intel IP, статистика трафика.
 
 ---
 
@@ -1062,16 +1084,65 @@ alert tcp $HOME_NET any -> any [3333,5555,7777,14444,45560] (
 
 ---
 
+## Ограничения и известные failure modes
+
+Честные ограничения — у каждого security-инструмента они есть, мы свои называем.
+
+- **Слепота к зашифрованному payload.** Инспектируем TLS-метаданные (SNI, JA3, цертификат), но не расшифрованный HTTPS-payload. Малварь, использующая известные cloud-фронты (CloudFront, Cloudflare) с generic JA3, может пройти незамеченной.
+- **Обход JA3-фингерпринта.** Современная малварь умеет рандомизировать TLS-handshake или копировать fingerprint популярного браузера. Layer 4 ловит распространённые случаи (97 fingerprint'ов из abuse.ch SSLBL); целеустремлённый противник обходит.
+- **Detection lag.** Поведенческое обнаружение (beaconing, exfil) требует значимого окна трафика. Дефолтные 30 минут уверенно ловят C2-callback с интервалом ≤5 мин; beaconing с интервалом 1 час может быть пропущен.
+- **Только мобильные устройства.** Бот сканирует устройство, подключившееся через VPN. Ноутбуки, десктопы, IoT-устройства в той же Wi-Fi-сети — out of scope.
+- **Только сетевая сторона.** В отличие от on-device инструментов (Amnesty MVT) мы не видим список установленных приложений, file-hashes, системные логи. Только сетевое поведение.
+- **Требование доверия к VPN.** Во время сканирования трафик пользователя проходит через сервер анализа. Privacy-policy бота явно об этом сообщает; пользователи, для кого это неприемлемо — целевая аудитория **Phase 2 self-hosted Docker**, см. [Будущая дорожная карта](#будущая-дорожная-карта).
+- **Ложные срабатывания.** Whitelist + AbuseIPDB confidence threshold + исключение client-IP ловят основные кейсы, но безобидный сервис на ранее скомпрометированном IP всё ещё может вызвать HIGH-алёрт. AI-генератор отчётов сглаживает это в plain-language объяснении — PR на улучшение калибровки приветствуются.
+- **Нет on-device remediation.** Бот говорит *что происходит*; remediation (factory reset, ротация паролей, профессиональная криминалистика) на пользователе.
+
+---
+
 ## Попробовать
 
-[@secure_scanbot](https://t.me/secure_scanbot) — бот работает 24/7
+[@secure_scanbot](https://t.me/secure_scanbot) — бот работает 24/7. Сканирование занимает ~30 минут после подключения VPN.
+
+---
+
+## Контакты
+
+| Канал | Для кого |
+|---|---|
+| 🤖 [@secure_scanbot](https://t.me/secure_scanbot) | Конечные пользователи — живой бот |
+| 💬 [@Creatman_it](https://t.me/Creatman_it) | Общие вопросы, партнёрства |
+| 🐙 [GitHub Issues](https://github.com/CreatmanCEO/security-scanner/issues) | Баги, фичи, предложения detection-правил |
+| 📧 creatmanick@gmail.com | Security researchers · responsible disclosure · пресса · партнёрство / коммерция |
+
+---
+
+## Связанные проекты — Claude Code-экосистема того же автора
+
+Проект построен в Claude Code-centric workflow. Автор поддерживает публичный toolset для этой дисциплины:
+
+- [`claude-code-antiregression-setup`](https://github.com/CreatmanCEO/claude-code-antiregression-setup) — `CLAUDE.md` + субагенты + хуки. [Habr](https://habr.com/ru/articles/1013330/) (топ-5 дня, 20K чтений).
+- [`ai-context-hierarchy`](https://github.com/CreatmanCEO/ai-context-hierarchy) — трёхуровневая система контекста. Featured в [Graphify v5.0 roadmap](https://github.com/safishamsi/graphify/issues/425).
+- [`claude-statusline`](https://github.com/CreatmanCEO/claude-statusline) — statusline для Claude Code с VPS-мониторингом. [Habr](https://habr.com/ru/articles/1013414/).
+- [`notebooklm-claude-workflows`](https://github.com/CreatmanCEO/notebooklm-claude-workflows) — 7 slash-команд для NotebookLM research-пайплайнов.
+- [`lingua-companion`](https://github.com/CreatmanCEO/lingua-companion) — voice-first English-tutor для русскоговорящих IT-специалистов.
+- [`diabot`](https://github.com/CreatmanCEO/diabot) — non-commercial Telegram-бот для диабета 1 типа (фото еды → carb counting).
+- [`ghost-showcase`](https://github.com/CreatmanCEO/ghost-showcase) — невидимый AI-ассистент для Windows (commercial product showcase).
 
 ---
 
 ## Лицензия
 
-[MIT](LICENSE)
+[MIT](LICENSE) · Николай Подоляк
 
 ---
 
-*Создано [Creatman](https://github.com/CreatmanCEO) — Делаем мобильную безопасность доступной для каждого.*
+## Автор
+
+**Николай Подоляк (Nick Podolyak)** — Python-разработчик и цифровой архитектор в [CREATMAN](https://creatman.site)
+
+- GitHub: [@CreatmanCEO](https://github.com/CreatmanCEO)
+- Habr: [creatman](https://habr.com/ru/users/creatman/)
+- dev.to: [@creatman](https://dev.to/creatman)
+- Telegram: [@Creatman_it](https://t.me/Creatman_it)
+
+*Делаем мобильную безопасность доступной для каждого.*
