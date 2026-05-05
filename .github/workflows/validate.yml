@@ -1,0 +1,82 @@
+name: Validate
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: LICENSE exists
+        run: test -s LICENSE || (echo "::error::LICENSE missing or empty" && exit 1)
+
+      - name: CHANGELOG.md exists
+        run: test -s CHANGELOG.md || (echo "::error::CHANGELOG.md missing or empty" && exit 1)
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: All docs/* assets referenced from READMEs exist
+        run: |
+          set -e
+          fail=0
+          for ref in $(grep -hoE 'docs/[a-zA-Z0-9_./-]+' README.md README.ru.md | sort -u); do
+            ref="${ref%[)\"\\,.]}"
+            if [ ! -e "$ref" ]; then
+              echo "::error file=README.md::missing referenced asset $ref"
+              fail=1
+            fi
+          done
+          exit $fail
+
+      - name: HTML samples are well-formed
+        run: |
+          set -e
+          fail=0
+          for f in $(git ls-files 'docs/**/*.html' '*.html'); do
+            if ! python -c "from html.parser import HTMLParser; HTMLParser().feed(open('$f', encoding='utf-8').read())" 2>&1 | grep -qE 'Error|error'; then
+              :  # parser ran without raising
+            else
+              echo "::error file=$f::HTML parse error"
+              fail=1
+            fi
+          done
+          exit $fail
+
+      - name: Internal Markdown links resolve
+        run: |
+          set -e
+          fail=0
+          for src in README.md README.ru.md CHANGELOG.md CONTRIBUTING.md docs/architecture.md docs/case-studies.md docs/detection-rules.md docs/device-telemetry.md docs/research-mobile-malware-signatures.md docs/reports/sample-scan-report.md; do
+            [ -f "$src" ] || continue
+            base="$(dirname "$src")"
+            for tgt in $(grep -hoE '\]\([^)]+\)' "$src" | sed 's/](\(.*\))/\1/' | sed 's/#.*$//'); do
+              case "$tgt" in
+                http*|mailto:*|"") continue ;;
+              esac
+              [ "$base" = "." ] && resolved="$tgt" || resolved="$base/$tgt"
+              if [ ! -e "$resolved" ] && [ ! -e "$tgt" ]; then
+                echo "::error file=$src::broken internal link → $tgt"
+                fail=1
+              fi
+            done
+          done
+          exit $fail
+
+      - name: Image / WebP screenshot files are non-empty
+        run: |
+          set -e
+          fail=0
+          for f in $(git ls-files 'docs/screenshots/*'); do
+            if [ ! -s "$f" ]; then
+              echo "::error file=$f::screenshot file empty"
+              fail=1
+            fi
+          done
+          exit $fail
